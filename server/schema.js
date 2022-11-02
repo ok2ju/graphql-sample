@@ -1,55 +1,12 @@
+const fs = require("fs");
+const path = require("path");
 const { createSchema } = require("graphql-yoga");
 const { sign } = require("jsonwebtoken");
 const { verifyAuthToken } = require("./utils/user");
 const { hashPassword, comparePasswords } = require("./utils/auth");
 
 const schema = createSchema({
-  typeDefs: `
-    type Query {
-        me: User
-        userById(id: Int!): User!
-        users: [User!]!
-        postById(id: Int!): Post!
-        posts: [Post!]!
-    }
-
-    type Mutation {
-        signUp(input: UserInput!): AuthPayload!
-        login(email: String!, password: String!): AuthPayload!
-        createUser(input: UserInput!): User!
-        deletePost(id: Int!): Post
-    }
-
-    type AuthPayload {
-        authToken: String!
-        user: User!
-    }
-
-    type User {
-        id: Int!
-        email: String!
-        name: String
-        posts: [Post!]!
-    }
-
-    type Post {
-        id: Int!
-        author: User
-        title: String!
-        content: String
-    }
-
-    input UserInput {
-        email: String!
-        name: String
-        posts: [PostInput!]
-    }
-
-    input PostInput {
-        title: String!
-        content: String
-    }
-  `,
+  typeDefs: fs.readFileSync(path.join(__dirname, "schema.graphql"), "utf-8"),
   resolvers: {
     Query: {
       me: (_, __, ctx) => {
@@ -80,11 +37,11 @@ const schema = createSchema({
           },
         });
 
-        const token = sign({ id: user.id }, process.env.JWT_SECRET, {
+        const authToken = sign({ id: user.id }, process.env.JWT_SECRET, {
           expiresIn: "24h",
         });
 
-        return { token, user };
+        return { authToken, user };
       },
       login: async (_, args, ctx) => {
         const { email, password } = args;
@@ -98,11 +55,11 @@ const schema = createSchema({
           throw new Error("Password is not correct");
         }
 
-        const token = sign({ id: user.id }, process.env.JWT_SECRET, {
+        const authToken = sign({ id: user.id }, process.env.JWT_SECRET, {
           expiresIn: "24h",
         });
 
-        return { token, user };
+        return { authToken, user };
       },
       createUser: (_, { input }, ctx) => {
         return ctx.prisma.user.create({

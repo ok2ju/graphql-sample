@@ -1,14 +1,14 @@
 const { createServer } = require("node:http");
 const { createYoga } = require("graphql-yoga");
+const { applyMiddleware } = require("graphql-middleware");
 const { PrismaClient } = require("@prisma/client");
 const { schema } = require("./schema");
-// const permissions = require("./permissions");
+const permissions = require("./permissions");
 
 const prisma = new PrismaClient();
 const yoga = createYoga({
-  schema,
+  schema: applyMiddleware(schema, permissions),
   context: { prisma },
-  // middlewares: [permissions],
 });
 const server = createServer(yoga);
 

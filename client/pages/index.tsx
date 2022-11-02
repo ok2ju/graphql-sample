@@ -1,27 +1,53 @@
 import Head from "next/head";
-import { useQuery } from "@apollo/client";
-import { GET_USERS } from "../services/api/graphql";
+import { useEffect } from "react";
+import { useQuery, useMutation } from "@apollo/client";
+import { SIGN_UP, GET_USERS } from "../services/api/graphql";
 import styles from "../styles/Home.module.css";
 
 export default function Home() {
-  const { loading, error, data } = useQuery(GET_USERS);
+  const [signUp, { data, loading }] = useMutation(SIGN_UP);
+  const {
+    loading: usersLoading,
+    error: usersError,
+    data: usersData,
+  } = useQuery(GET_USERS, {
+    skip: !data?.signUp?.authToken || loading,
+  });
+
+  useEffect(() => {
+    if (data?.signUp?.authToken) {
+      localStorage.setItem("token", data?.signUp?.authToken);
+    }
+  }, [data?.signUp?.authToken]);
 
   const renderUsers = () => {
-    if (loading) {
+    if (usersLoading) {
       return <p>Loading...</p>;
     }
 
-    if (error) {
+    if (usersError) {
       return <p>Ops, something goes wrong!</p>;
     }
 
     return (
       <ul>
-        {data.users.map((user: any) => (
+        {usersData.users.map((user: any) => (
           <li key={user.id}>{user.name}</li>
         ))}
       </ul>
     );
+  };
+
+  const handleSignUp = () => {
+    signUp({
+      variables: {
+        input: {
+          email: `test-${Math.random()}@gmail.com`,
+          name: "test",
+          password: "password",
+        },
+      },
+    });
   };
 
   return (
@@ -32,7 +58,9 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {renderUsers()}
+      <button onClick={handleSignUp}>Sign up</button>
+
+      {data?.signUp?.authToken && !loading ? renderUsers() : null}
     </div>
   );
 }
